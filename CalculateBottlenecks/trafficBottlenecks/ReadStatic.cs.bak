@@ -1,0 +1,87 @@
+﻿using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace trafficBottlenecks
+{
+    public class ReadStatic
+    {
+        public ReadStatic(CityGraph cityGraph)
+        {
+            string FilePath = "C:\\Users\\user\\Desktop\\PhD\\data\\RT\\trafficBottlenecksCode\\streetsFile.txt";
+            using (StreamReader sr = new StreamReader(FilePath))
+            {
+                string line = sr.ReadLine();//remove header, then start
+                line = sr.ReadLine();
+                int lineInx = 0;
+                while (!string.IsNullOrEmpty(line))
+                {
+                    string[] elements = line.Split("#".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                    if (elements.Length > 1)
+                    {
+                        string[] rsIDProperties = elements[0].Split(":".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                        string roadSegmentId = rsIDProperties[2];
+                        //bool stop = false;
+                        //if (roadSegmentId.Equals(" 3226185050") || lineInx == 3274)
+                        //{
+                        //    stop = true;
+                        //}
+
+                        string[] distProperties = elements[3].Split(":".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                        int distance = (int)double.Parse(distProperties[1]);
+                        string[] lanesProperties = elements[5].Split(":".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                        int lanes = int.Parse(lanesProperties[1]);
+                        string[] polyProperties = elements[6].Split("$".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                        Point3d originNode = Point3d.CreateFromPolylineInx(polyProperties, 0);
+                        string originNodeLocKey = Parameters.CalcNodeLocationKey(originNode.X, originNode.Y);
+                        Point3d destNode = Point3d.CreateFromPolylineInx(polyProperties, polyProperties.Length - 1);
+                        string destNodeLocKey = Parameters.CalcNodeLocationKey(destNode.X, destNode.Y);
+                        string[] croppedPolyProperties = elements[7].Split(">".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                        distance -= int.Parse(croppedPolyProperties[1]);
+                        string[] secondR = croppedPolyProperties[2].Split("\"".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                        distance -= int.Parse(secondR[0]);
+
+                        if (!cityGraph.allNodesLocations.ContainsKey(originNodeLocKey))
+                        {
+                            CityGraphNode fromNode = new CityGraphNode(cityGraph.allNodes.Count, originNodeLocKey, originNode, cityGraph);
+                        }
+                        if (!cityGraph.allNodesLocations.ContainsKey(destNodeLocKey))
+                        {
+                            CityGraphNode toNode = new CityGraphNode(cityGraph.allNodes.Count, destNodeLocKey, destNode, cityGraph);
+                        }
+                        int originNodeId = cityGraph.allNodesLocations[originNodeLocKey];
+                        int destNodeId = cityGraph.allNodesLocations[destNodeLocKey];
+                        //string roadSegmentId, int id, CityGraphNode fromN, CityGraphNode toN, int distance, bool isPrimary, int lanes
+                        int linkId = cityGraph.allLinks.Count;
+                        //bool stop = false;
+                        //if (linkId == 597)
+                        //{
+                        //    stop = true;
+                        //}
+                        CityGraphLink newLink = new CityGraphLink(roadSegmentId, linkId, cityGraph.allNodes[originNodeId], cityGraph.allNodes[destNodeId], distance, lanes, croppedPolyProperties[0]);
+                        cityGraph.allLinks.Add(newLink);
+                        while (cityGraph.allLinksRTDLocations.ContainsKey(newLink.rTLocationKey))
+                        {
+                            newLink.rTLocationKey = newLink.rTLocationKey + "1";
+                        }
+                        cityGraph.allLinksRTDLocations.Add(newLink.rTLocationKey, newLink.id);
+                        cityGraph.allNodes[originNodeId].fromMe.Add(newLink.id);
+                        cityGraph.allNodes[destNodeId].toMe.Add(newLink.id);
+                        lineInx++;
+                        line = sr.ReadLine();
+                    }
+                    else {
+                        break;
+                    }
+                }
+                sr.Close();
+            }
+            cityGraph.allUnMeasured = new List<int>(cityGraph.allLinksRTDLocations.Values);
+        }
+    }
+}
+
+

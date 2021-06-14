@@ -1,0 +1,135 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace trafficBottlenecks
+{
+    public static class Parameters
+    {
+
+        internal static int[] daysToTest;
+        internal static List<int> weekend;
+        internal static int[] dayRelativeTImeZone;
+        internal static int maxNumberOfLinks = 8000;
+        
+		internal static int maxVelocity = 140;
+        internal static double velocityMultiplier = 3.6;//2.23694//mph; 3.6//km/h
+        internal static double availabilityThreshold = 0.5;
+        internal static int locationPading = 10;
+       
+        internal static double loadThreshold = 0.5;
+        internal static List<int> iterationsToCheckClusters = new List<int> { 72 };
+        internal static int maxRoadDensity = 150;
+
+        internal static int testYear;
+        internal static int testMonth;
+        internal static int startDayDate;
+        internal static double validIterationTh = 0.85;//ratio of valid links in a valid iteration
+        internal static int mininalClusterStreetsCount;
+        internal static int minRepPerHourCluster = 2;//
+        internal static int minRepPerClusterOverTime = 5;
+
+        internal static int useExternalMapping = 2;//after correction and restoration
+
+        internal static string city = "London";//"London"/"TLV"
+
+        public static void initParameters()
+        {
+            if (city.Equals("TLV"))
+            {
+                daysToTest = new int[] { 1, 2, 3, 4, 5 };
+                dayRelativeTImeZone = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 };
+                weekend = new List<int> { };//TLV
+                testYear = 2017; //London: 2018; TLV: 2017;
+                testMonth = 2; //London: 3; TLV: 2;
+                startDayDate = 12; //London: 21; TLV: 12;
+                mininalClusterStreetsCount = 50;
+            }
+            else//London
+            {
+                daysToTest = new int[] { 1, 2, 3, 6, 7 };//weekdays only
+                dayRelativeTImeZone = new int[] { 0, -2, -2, -3, -3, -2, -2, -2 };// {0, -2, -2, -3, -3, -2, -2, -2 };//London
+                weekend = new List<int> { };//{ 4, 5};//London
+                testYear = 2018; 
+                testMonth = 3;
+                startDayDate = 21;
+                mininalClusterStreetsCount = 100;
+            }
+        }
+
+        public static string GetLocationKey(double location)
+        {
+            return location.ToString("00.0000000");
+        }
+
+        public static string CalcLinkLocationKey(double originLocX, double originLocY, double destLocX, double destLocY)
+        {
+            string originLocationKey = Parameters.GetLocationKey(originLocX) + "_" + Parameters.GetLocationKey(originLocY);
+            string destLocationKey = Parameters.GetLocationKey(destLocX) + "_" + Parameters.GetLocationKey(destLocY);
+            return originLocationKey + "," + destLocationKey;
+        }
+
+        public static string CalcNodeLocationKey(double locX, double locY)
+        {
+            return Parameters.GetLocationKey(locX) + "_" + Parameters.GetLocationKey(locY);
+        }
+
+        internal static int CalcDistToWGS84(double latOrigAPI, double lonOrigAPI, double latDestAPI, double lonDestAPI)
+        {
+            double lon1 = lonOrigAPI * Math.PI / 180;
+            double lon2 = lonDestAPI * Math.PI / 180;
+            double lat1 = latOrigAPI * Math.PI / 180;
+            double lat2 = latDestAPI * Math.PI / 180;
+
+            double a = 6378137;
+            double es = 0.006694379990141320;
+            double dlon = lon2 - lon1;
+            double dlat = lat2 - lat1;
+            double avg_lat = (lat2 + lat1) / 2;
+            double rlon = a * Math.Cos(avg_lat) / Math.Sqrt(1 - es * Math.Pow(Math.Sin(avg_lat), 2));
+            double rlat = a * (1 - es) / Math.Pow((1 - es * Math.Pow(Math.Sin(avg_lat), 2)), 1.5);
+            double x = dlon * rlon;
+            double y = dlat * rlat;
+            return (int)(Math.Sqrt(x * x + y * y));
+            //according to https://groups.google.com/forum/#!msg/sci.geo.satellite-nav/KRX55VzvzKo/lWOYir-g_AsJ
+        }
+
+        public static DateTime CalcDateTimeFromFileString(string fromFile, int testDay)
+        {
+            string[] elements = fromFile.Split("_".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+            string[] minutesPart = elements[3].Split(".".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+            int day = testDay + startDayDate -1;
+            int hours = (int.Parse(elements[2]) + dayRelativeTImeZone[testDay] + 24) % 24;
+            int minutes = (int)(Math.Round((double)(int.Parse(minutesPart[0]) / 15))) * 15;
+            DateTime t = new DateTime(testYear, testMonth, day, hours, minutes, 0);
+            return t;
+        }
+        public static int GetIterationNumberFromDate(DateTime dt, int testDay)
+        {
+            int res = 0;
+            int dayDelta = testDay-1;
+            res = dayDelta * 96 + dt.Hour * 4 + (int)dt.Minute / 15;
+            return res;
+        }
+
+        internal static int [] getIterationsFromTestDayAndHour(int testDay, int hour)
+        {
+            int[] res = new int[4];
+            res[0] = (testDay - 1)*96 + hour*4;
+            res[1] = res[0] + 1;
+            res[2] = res[1] + 1;
+            res[3] = res[2] + 1;
+            return res;
+        }
+
+        internal static DateTime GetDateFromIteration(int iteration)
+        {
+            int testDay = (int)Math.Floor(iteration/96.0);
+            int hours = (int)Math.Floor((iteration %96) / 4.0);
+            int minutes = (iteration % 96) * 15;
+            return new DateTime(testYear, testMonth, testDay+startDayDate-1, hours, minutes, 0);
+        }
+    }
+}

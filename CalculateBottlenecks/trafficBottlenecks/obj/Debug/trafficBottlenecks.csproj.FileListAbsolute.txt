@@ -1,0 +1,26 @@
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecks\trafficBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.exe.config
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecks\trafficBottlenecks\trafficBottlenecks\obj\Debug\ConsoleApplication1.exe
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecks\trafficBottlenecks\trafficBottlenecks\obj\Debug\ConsoleApplication1.pdb
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecks\trafficBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.exe
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecks\trafficBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.pdb
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecks\trafficBottlenecks\trafficBottlenecks\obj\Debug\trafficBottlenecks.csprojResolveAssemblyReference.cache
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecksT\trafficBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.exe.config
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecksT\trafficBottlenecks\trafficBottlenecks\obj\Debug\ConsoleApplication1.exe
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecksT\trafficBottlenecks\trafficBottlenecks\obj\Debug\ConsoleApplication1.pdb
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecksT\trafficBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.exe
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecksT\trafficBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.pdb
+C:\Users\user\Documents\Visual Studio 2015\Projects\trafficBottlenecksT\trafficBottlenecks\trafficBottlenecks\obj\Debug\trafficBottlenecks.csprojResolveAssemblyReference.cache
+D:\Nimrod\PB\trafficBottlenecks\trafficBottlenecks\obj\Debug\TrafficBottlenecks.csproj.CoreCompileInputs.cache
+D:\Nimrod\PB\trafficBottlenecks\trafficBottlenecks\obj\Debug\ConsoleApplication1.exe
+D:\Nimrod\PB\trafficBottlenecks\trafficBottlenecks\obj\Debug\ConsoleApplication1.pdb
+D:\Nimrod\PB\trafficBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.exe.config
+D:\Nimrod\PB\trafficBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.exe
+D:\Nimrod\PB\trafficBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.pdb
+D:\Nimrod\PB\trafficBottlenecks\trafficBottlenecks\obj\Debug\TrafficBottlenecks.csprojAssemblyReference.cache
+D:\Nimrod\PB\Code\bottlenecksprioritization\BottlenecksPrioritization\CalculateBottlenecks\trafficBottlenecks\obj\Debug\TrafficBottlenecks.csproj.CoreCompileInputs.cache
+D:\Nimrod\PB\Code\bottlenecksprioritization\BottlenecksPrioritization\CalculateBottlenecks\trafficBottlenecks\obj\Debug\ConsoleApplication1.exe
+D:\Nimrod\PB\Code\bottlenecksprioritization\BottlenecksPrioritization\CalculateBottlenecks\trafficBottlenecks\obj\Debug\ConsoleApplication1.pdb
+D:\Nimrod\PB\Code\bottlenecksprioritization\BottlenecksPrioritization\CalculateBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.exe.config
+D:\Nimrod\PB\Code\bottlenecksprioritization\BottlenecksPrioritization\CalculateBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.exe
+D:\Nimrod\PB\Code\bottlenecksprioritization\BottlenecksPrioritization\CalculateBottlenecks\trafficBottlenecks\bin\Debug\ConsoleApplication1.pdb
+D:\Nimrod\PB\Code\bottlenecksprioritization\BottlenecksPrioritization\CalculateBottlenecks\trafficBottlenecks\obj\Debug\TrafficBottlenecks.csprojAssemblyReference.cache

@@ -1,0 +1,1 @@
+trunk,fromLocation,toLocation,loadedFor,lanes, branchCost,wTCost,linkId,thisBranch.myMeasureType

@@ -1,0 +1,122 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace trafficBottlenecks
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            //readAllRealTraffic.CalcVelocetyRPerLink(cityGraph);
+
+
+            CityGraph cityGraph = new CityGraph();
+            if (Parameters.useExternalMapping)
+            {
+                ReadStatic ReadStatic = new ReadStatic(cityGraph);
+            }
+            else {
+                ReadOSM readOSM = new ReadOSM(cityGraph);
+                ReadAPIRoads readAPIRoads = new ReadAPIRoads(cityGraph);
+            }
+
+            //PrintRelevantLinks(cityGraph);
+            ReadRealTraffic readAllRealTraffic = new ReadRealTraffic(cityGraph);//use multiple ways (original) files
+
+            //#calc Havlin's w for each link:
+            readAllRealTraffic.CalcAvailabilityPerLink(cityGraph);
+            readAllRealTraffic.HandleEmptyLinks(cityGraph);
+            //#calc Kosaraju
+            //////////////////////////
+
+
+            //#loadTrees
+            LoadTree loadTree = new LoadTree();
+            loadTree.CalcLoadTrees(cityGraph);
+            loadTree.CalcLoadTreesCost(cityGraph, Parameters.iterationsToCheckClusters[0]);
+            loadTree.PrintLoadTrees(cityGraph, Parameters.iterationsToCheckClusters[0]);
+            PrintLoadsData(cityGraph);
+
+            Console.WriteLine("Done!");
+        }
+
+        private static void PrintRelevantLinks(CityGraph cityGraph)
+        {
+            string directoryString = "C:\\Users\\user\\Desktop\\PhD\\data\\OSM\\C#_out";
+            string fileName = "relevantLinks.txt";
+            FileStream fs = File.Create(fileName);
+            string path = directoryString + "\\" + fileName;
+
+            List<string> CityGraphLinksData = new List<string>();
+            for (int i = 0; i < cityGraph.allLinks.Count; i++)
+            {
+                if (cityGraph.allLinks[i].rTLocationKey != null)
+                {
+                    CityGraphLinksData.Add(cityGraph.allLinks[i].PrintCityGraphLink());
+                }
+            }
+            File.WriteAllLines(path, CityGraphLinksData);
+        }
+
+        private static void PrintLoadsData(CityGraph cityGraph)
+        {
+            string directoryString = "C:\\Users\\user\\Desktop\\PhD\\bottleneck\\pushBack\\loadCluaters";
+
+            string allLoadsfileName = "LinksLoadNew.csv";
+            FileStream allLoadFS = File.Create(allLoadsfileName);
+            string allLoadsPath = directoryString + "\\" + allLoadsfileName;
+            List<string> CityGraphLinksLoadData = new List<string>();
+
+            string aggLoadsfileName = "LinksAggLoadNew.csv";
+            FileStream aggLoadFS = File.Create(aggLoadsfileName);
+            string aggLoadsPath = directoryString + "\\" + aggLoadsfileName;
+            List<string> CityGraphLinksAggLoadData = new List<string>();
+
+            for (int i = 0; i < cityGraph.allLinks.Count; i++)
+            {
+                CityGraphLink thisLink = cityGraph.allLinks[i];
+                int mesured = 0;
+                if (thisLink.isMesured)
+                {
+                    mesured = 1;
+                }
+                double startNodeX = cityGraph.allNodes[thisLink.start_node].locationX;
+                double startNodeY = cityGraph.allNodes[thisLink.start_node].locationY;
+                double endNodeX = cityGraph.allNodes[thisLink.end_node].locationX;
+                double endNodeY = cityGraph.allNodes[thisLink.end_node].locationY;
+
+                string myLoadString = string.Format("{0:0000},{1:00.00000000},{2:00.00000000},{3:00.00000000},{4:00.00000000},{5:00},{6:0},",
+                    thisLink.id, startNodeX, startNodeY, endNodeX, endNodeY, thisLink.lanes, mesured);
+                string myAggString = string.Copy(myLoadString);
+                int[] loadAgg = new int[Parameters.daysToTest.Length + 1];
+                for (int j = 0; j < Parameters.daysToTest.Length * 96; j++)
+                {
+                    double availability = 9.99;
+                    if (!Double.IsNaN(thisLink.allVs[j]) && thisLink.allVs[j] > 0 && thisLink.percentileV > 0)
+                    {
+                        availability = Math.Min(thisLink.allVs[j] / thisLink.percentileV, 1.0);
+                        if (availability < Parameters.availabilityThreshold)
+                        {
+                            int day = (int)Math.Floor(j / 96.0);
+                            loadAgg[day]++;
+                            loadAgg[Parameters.daysToTest.Length]++;
+                        }
+                    }
+                    myLoadString = myLoadString + string.Format("{0:0.00},", availability);
+                }
+                CityGraphLinksLoadData.Add(myLoadString);
+                for (int j = 0; j < Parameters.daysToTest.Length + 1; j++)
+                {
+                    myAggString = myAggString + string.Format("{0:0.00},", loadAgg[j]);
+                }
+                CityGraphLinksAggLoadData.Add(myAggString);
+            }
+            File.WriteAllLines(allLoadsPath, CityGraphLinksLoadData);
+            File.WriteAllLines(aggLoadsPath, CityGraphLinksAggLoadData);
+        }
+    }
+}

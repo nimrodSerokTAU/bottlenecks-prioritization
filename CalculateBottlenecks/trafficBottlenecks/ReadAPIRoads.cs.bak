@@ -1,0 +1,85 @@
+﻿using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace trafficBottlenecks
+{
+    class ReadAPIRoads
+    {
+        public ReadAPIRoads(CityGraph cityGraph)
+        {
+            string FilePath = "C:\\Users\\user\\Desktop\\PhD\\data\\RT\\trafficBottlenecksCode\\roads.csv";
+            List<string> miss = new List<string>();
+            List<string> savedA = new List<string>();
+            using (StreamReader sr = new StreamReader(FilePath))
+            {
+                string line = sr.ReadLine();//remove header, then start
+                line = sr.ReadLine();
+                int inx = 0;
+                while (!string.IsNullOrEmpty(line))
+                {
+                    string[] elements = line.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                    //string[] properties = elements[0].Split("=".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                    double sourceLatitude = Convert.ToDouble(elements[2]);
+                    double sourceLongitude = Convert.ToDouble(elements[3]);
+                    double sourceExitLatitude = Convert.ToDouble(elements[5]);
+                    double sourceExitLongitude = Convert.ToDouble(elements[6]);
+                    double destinationLatitude = Convert.ToDouble(elements[8]);
+                    double destinationLongitude = Convert.ToDouble(elements[9]);
+                    double destinationEnteranceLatitude = Convert.ToDouble(elements[11]);
+                    double destinationEnteranceLongitude = Convert.ToDouble(elements[12]);
+
+                    //string linkLocationKey = Parameters.CalcLinkLocationKey(sourceLongitude, sourceLatitude, destinationLongitude, destinationLatitude);
+                    string linkRTDLocationKey = Parameters.CalcLinkLocationKey(sourceExitLatitude, sourceExitLongitude, destinationEnteranceLatitude, destinationEnteranceLongitude);
+                    if (cityGraph.allLinksRTDLocations.ContainsKey(linkRTDLocationKey))
+                    {
+                        int linkId = cityGraph.allLinksRTDLocations[linkRTDLocationKey];
+                        cityGraph.allLinks[linkId].isMesured = true;
+                    }
+                    else
+                    {
+                        CityGraphLinkCombination newUnmesearuedLink = new CityGraphLinkCombination(cityGraph, sourceLongitude, sourceLatitude, destinationLongitude, destinationLatitude, linkRTDLocationKey);
+                        cityGraph.allCombinedLinks.Add(newUnmesearuedLink.rTLocationKey, newUnmesearuedLink);
+                    }
+                    line = sr.ReadLine();
+                    inx++;
+                }
+                sr.Close();
+                MapComninedInfluencers(cityGraph, miss, savedA);
+                PrintMisses(miss);
+                PrintSaved(savedA, "savedA.txt");
+            }
+        }
+
+        private void MapComninedInfluencers(CityGraph cityGraph, List<string> miss, List<string> savedA) {
+            foreach (KeyValuePair<string, CityGraphLinkCombination> combinedLink in cityGraph.allCombinedLinks)
+            {
+                combinedLink.Value.FillMyInfluencers(cityGraph, savedA, miss);
+            }
+       }
+
+        private void PrintMisses(List<string> miss)
+        {
+            string directoryString = "C:\\Users\\user\\Desktop\\PhD\\data\\RT\\roadsFile";
+            string fileName = "misses.txt";
+
+            FileStream fs = File.Create(fileName);
+            string path = directoryString + "\\" + fileName;
+            File.WriteAllLines(path, miss);
+        }
+
+        private void PrintSaved(List<string> saved, string fileName)
+        {
+            if (saved.Count > 0)
+            {
+                string directoryString = "C:\\Users\\user\\Desktop\\PhD\\data\\RT\\roadsFile";
+                FileStream fs = File.Create(fileName);
+                string path = directoryString + "\\" + fileName;
+                File.WriteAllLines(path, saved);
+            }
+        }
+    }
+}

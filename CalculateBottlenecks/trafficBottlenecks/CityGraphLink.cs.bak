@@ -1,0 +1,319 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace trafficBottlenecks
+{
+    public class CityGraphLink
+    {
+        public int id;
+        public int start_node;
+        public int end_node;
+        public string roadSegmentId;
+        public string locationKey;
+        public string rTLocationKey;
+        public int apiDistance;
+        public int calculatedDistance;
+        public double[] allVs;
+        public int[] allVAvailabilities;
+        public int[] lastLoadedCounter;
+        public double[] lastLoadedW;
+        public int lanes;
+        public double costInOneLoadTree;
+        public bool isMesured;
+        public double VelocityThrehold;
+        public int errorsCount;
+        public List<int> fillMeFromInNeighbours;
+        public List<int> fillMeFromOutNeighbours;
+        public double percentileV;
+        public string name;
+
+        //public double dayLoadAcc;
+        //public double nightLoadAcc;
+
+
+        public CityGraphLink(string roadSegmentId, int id, CityGraphNode fromN, CityGraphNode toN, int distance, int lanes)
+        {
+            this.id = id;
+            start_node = fromN.id;
+            end_node = toN.id;
+            this.roadSegmentId = roadSegmentId;
+            this.name = string.Copy(name);
+            locationKey = fromN.locationKey + "," + toN.locationKey;
+            this.calculatedDistance = distance;
+            this.allVs = new double[Parameters.daysToTest.Length*96];
+            this.allVAvailabilities = new int[Parameters.daysToTest.Length * 96];
+            this.lastLoadedCounter = new int[Parameters.daysToTest.Length * 96];
+            this.lastLoadedW = new double[Parameters.daysToTest.Length * 96];
+            this.lanes = lanes;
+            costInOneLoadTree = 0;
+        }
+
+        public CityGraphLink(string roadSegmentId, int id, CityGraphNode fromN, CityGraphNode toN, int distance, int lanes, string croppedPolygone)
+        {
+
+            this.id = id;
+            start_node = fromN.id;
+            end_node = toN.id;
+            this.roadSegmentId = roadSegmentId;
+            locationKey = fromN.locationKey + "," + toN.locationKey;
+            this.calculatedDistance = distance;
+            this.allVs = new double[Parameters.daysToTest.Length * 96];
+            allVAvailabilities = new int[Parameters.daysToTest.Length * 96];
+            this.lastLoadedCounter = new int[Parameters.daysToTest.Length * 96];
+            this.lastLoadedW = new double[Parameters.daysToTest.Length * 96];
+            this.lanes = lanes;
+            costInOneLoadTree = 0;
+            this.isMesured = true;
+            
+            errorsCount = 0;
+
+            string[] polyProperties = croppedPolygone.Split("$".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+            Point3d start = Point3d.CreateFromPolylineInx(polyProperties, 0);
+            Point3d end = Point3d.CreateFromPolylineInx(polyProperties, polyProperties.Length - 1);
+            if (start.X != end.X || start.Y != end.Y)
+            {
+                rTLocationKey = Parameters.CalcLinkLocationKey(start.Y, start.X, end.Y, end.X);
+            }
+            else
+            {
+                rTLocationKey = string.Copy(locationKey);
+                isMesured = false;
+
+            }
+        }
+
+        public void AddToList(List<string> resLink, List<CityGraphLink> allLinks)
+        {
+            allLinks.Add(this);
+        }
+
+        public string PrintCityGraphLink()
+        {
+            string res = string.Format("{0},{1},{2}", this.id, this.start_node, this.end_node);
+            return res;
+        }
+        
+        internal void AddnewSample(int iteration, int distance, int time, Dictionary<int, int> BAD, List<int> allUnMeasured, List<int> thisIterationUnMeasured)
+        {
+            double velocity = -1;
+            double deltaDist = Math.Abs(distance - apiDistance);
+            if (apiDistance > 0 && (deltaDist > apiDistance * 0.15 + 10.0) || calculatedDistance * 1.6 < distance)
+            {
+                if (!BAD.ContainsKey(id))
+                {
+                    BAD.Add(id, 0);
+                }
+                BAD[id]++;
+                //BAD.Add(string.Format("BAD response for link id: {0}. calculatedDistance: {1}, distance: {2}. apiDistance: {3}", id, calculatedDistance, distance, apiDistance));
+                errorsCount++;
+            }
+            else
+            {
+                if (apiDistance == 0)
+                {
+                    apiDistance = distance;
+                }
+                if (allUnMeasured.Contains(this.id))
+                {
+                    allUnMeasured.Remove(this.id);
+                }
+                thisIterationUnMeasured.Remove(this.id);
+                if (time < 1)
+                    time = 1;
+                velocity = (double)(Math.Min(((double)distance / (double)time) * Parameters.velocityMultiplier, Parameters.maxVelocity));
+                allVs[iteration] = velocity;
+                this.isMesured = true;
+            }
+        }
+
+        public void FillLinkAvailability(Dictionary<int, int> linksOfLoadTreeDic, Dictionary<int, List<int>> linksOfLoadTree)
+        {
+            List<double> allVsSorted = new List<double>(this.allVs);
+            allVsSorted.Sort();
+
+            int percentile = (int)((double)allVsSorted.Count * 0.95);
+            this.percentileV = allVsSorted[percentile];
+            if (this.percentileV > Parameters.maxVelocity)
+            {
+                VelocityThrehold = Parameters.maxVelocity;
+            }
+            if (this.percentileV == allVsSorted[0])//always same result -> always free
+            {
+                VelocityThrehold = 1.0;
+            }
+            else {
+                this.VelocityThrehold = Math.Max(Math.Min(this.percentileV, Parameters.maxVelocity), 1.0);
+            }
+            for (int i = 0; i < allVs.Length; i++)
+            {
+                if (allVs[i] > 0)
+                {
+                    int thisAvailability = Math.Min((int)(allVs[i] / this.VelocityThrehold * 100), 100);
+                    int comulativeAvailabilityDistributionInx = (int)Math.Floor(i / 4.0);
+                    allVAvailabilities[i] = thisAvailability;
+                    if (thisAvailability <= Parameters.availabilityThreshold*100)
+                    {
+                        if (i > 0)
+                        {
+                            lastLoadedCounter[i] = lastLoadedCounter[i - 1] + 1;
+                            lastLoadedW[i] = lastLoadedW[i-1] + CalcCurrentSpecificLoadCost(this.lanes, this.apiDistance, this.percentileV, allVs[i]);
+                        }
+                        else
+                        {
+                            lastLoadedCounter[i] = 1;
+                            lastLoadedW[i] = CalcCurrentSpecificLoadCost(this.lanes, this.apiDistance, this.percentileV, allVs[i]);
+                        }
+                    }
+                    else
+                    {
+                        lastLoadedCounter[i] = 0;
+                        lastLoadedW[i] = 0;
+                    }
+                }
+                else
+                {
+                    allVAvailabilities[i] = -1;
+                    if (i>0)
+                    {
+                        lastLoadedW[i] = lastLoadedW[i - 1];
+                    }
+                    else
+                    {
+                        lastLoadedW[i] = 0;
+                    }
+                }
+        
+                if (Parameters.iterationsToCheckClusters.Contains(i))
+                {
+                    if (lastLoadedCounter[i] > 0)
+                    {
+                        linksOfLoadTreeDic.Add(this.id, lastLoadedCounter[i]);
+                        if (!linksOfLoadTree.ContainsKey(lastLoadedCounter[i]))
+                        {
+                            linksOfLoadTree.Add(lastLoadedCounter[i], new List<int>());
+                        }
+                        linksOfLoadTree[lastLoadedCounter[i]].Add(this.id);
+                    }
+                }
+            }
+        }
+
+        private double CalcCurrentSpecificLoadCost(int w, int s, double vf, double vc)
+        {
+            double Dc = (double)(Parameters.maxRoadDensity) * (1.0 - vc / vf);
+            double Tc = s / (vc*100/6.0);//minutes
+            double vlt = 0.5 * vf;
+            double Tlt = s / (vlt*100 / 6.0);//minutes
+            double Cc = Dc * w * s/1000* (Tc - Tlt);
+            return Cc;
+        }
+
+        public bool IsPossibleToInterpolateMe(CityGraph cityGraph, List<int> emptyLinks, double inputDataRatio)
+        {
+            int neighboursCounter = 0;
+            List<int> inNeighboursToFill = new List<int>();
+            List<int> outNeighboursToFill = new List<int>();
+            foreach (int inLinkId in cityGraph.allNodes[start_node].toMe)
+            {
+                if (!cityGraph.allNodes[end_node].fromMe.Contains(inLinkId))//if not reverse direction
+                {
+                    if (!emptyLinks.Contains(inLinkId))//contains traffic data;
+                    {
+                        inNeighboursToFill.Add(inLinkId);
+                    }
+                    neighboursCounter++;
+                }
+            }
+            foreach (int outLinkId in cityGraph.allNodes[end_node].fromMe)
+            {
+                if (!cityGraph.allNodes[start_node].toMe.Contains(outLinkId))//if not reverse direction
+                {
+                    if (!emptyLinks.Contains(outLinkId))
+                    {
+                        outNeighboursToFill.Add(outLinkId);
+                    }
+                    neighboursCounter++;
+                }
+            }
+            double dataRatio = (double)(inNeighboursToFill.Count + outNeighboursToFill.Count) / neighboursCounter;
+            if (dataRatio >= inputDataRatio)
+            {
+                this.isMesured = false;
+                this.fillMeFromInNeighbours = new List<int>(inNeighboursToFill);
+                this.fillMeFromOutNeighbours = new List<int>(outNeighboursToFill);
+                return true;
+            }
+            return false;
+        }
+
+        private double CalcLinkHistoryCostForOneSample(double vc, double vf, int w, int s)
+        {
+            double D = (double)(Parameters.maxRoadDensity) * (1.0 - Math.Min(vc, vf) / vf);
+            double F = vc * D * w;
+            double Tc = s / (vc * 100.0 / 6.0);//minutes
+            double vlt = 0.5 * vf;
+            double Tlt = s / (vlt * 100.0 / 6.0);//minutes
+            double Cost = 0.25 * F * (Tc - Tlt);
+            return Cost;
+        }
+
+        public void InterpolateMeFromNeighbours(CityGraph cityGraph, int iteration)
+        {
+            int outAvailability = CalcAvgAvilability(cityGraph,  iteration, this.fillMeFromOutNeighbours);
+            int inAvailability = CalcAvgAvilability(cityGraph, iteration, this.fillMeFromInNeighbours);
+            int availability = 100;
+            if(outAvailability > -1 && inAvailability > -1)
+            {
+                availability = (int)(outAvailability + inAvailability) / 2;
+            }
+            else if (outAvailability > -1)
+            {
+                availability = outAvailability;
+            }
+            else if (inAvailability > -1)
+            {
+                availability = inAvailability;
+            }
+            this.allVAvailabilities[iteration] = availability;
+            this.allVs[iteration] = -1;
+        }
+        private int CalcAvgAvilability(CityGraph cityGraph, int iteration, List<int> neighbours)
+        {
+            int tmpAvailability = 0;
+            int numberOfRelevantNeighbours = 0;
+            foreach (int inLinkId in neighbours)
+            {
+                int neighbourAvailability = cityGraph.allLinks[inLinkId].allVAvailabilities[iteration];
+                if (neighbourAvailability > -1)
+                {
+                    tmpAvailability += neighbourAvailability;
+                    numberOfRelevantNeighbours++;
+                }
+            }
+            if (numberOfRelevantNeighbours > 0)
+            {
+                return(int)((double)tmpAvailability / (double)neighbours.Count);
+            }
+            return -1;
+        }
+    }
+
+/////////////////////////////////
+
+    //public class NodeGenerationSearch
+    //{
+    //    public int id;
+    //    public List<int> linksOnWay;
+    //    public bool found;
+
+    //    public NodeGenerationSearch(int nodeId)
+    //    {
+    //        this.id = nodeId;
+    //        linksOnWay = new List<int>();
+    //        found = false;
+    //    }
+    //}
+}
